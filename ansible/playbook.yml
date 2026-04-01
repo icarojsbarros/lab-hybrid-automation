@@ -1,0 +1,6 @@
+---
+- name: Setup de Servidor Seguro
+  hosts: webservers
+  become: true
+  roles:
+    - common

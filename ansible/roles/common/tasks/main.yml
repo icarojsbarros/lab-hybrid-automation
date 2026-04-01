@@ -1,0 +1,64 @@
+---
+# 1. Atualização do Sistema
+- name: Update System
+  yum:
+    name: "*"
+    state: latest
+
+# 2. Instalação de Pacotes Base (Docker e Firewalld)
+- name: Install Base Packages (Docker & Firewalld)
+  yum:
+    name:
+      - docker
+      - firewalld
+    state: present
+
+# 3. Habilitação e Início dos Serviços
+- name: Enable and Start Services
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - docker
+    - firewalld
+
+# 4. Hardening de Segurança - SELinux Permissive (Runtime)
+# Usamos shell pois o binding libselinux-python costuma falhar no Python 3 do AL2
+- name: Security Hardening - Set SELinux to Permissive (Runtime)
+  shell: setenforce 0
+  register: selinux_cmd
+  failed_when: false
+  changed_when: false
+
+# 5. Hardening de Segurança - SELinux Permissive (Persistente)
+- name: Security Hardening - Persist SELinux Permissive in Config
+  lineinfile:
+    path: /etc/selinux/config
+    regexp: '^SELINUX='
+    line: 'SELINUX=permissive'
+
+# 6. Hardening de Segurança - Desabilitar Login Root via SSH
+- name: Security Hardening - Disable Root SSH Login
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^PermitRootLogin'
+    line: 'PermitRootLogin no'
+  notify: reload sshd
+
+# 7. Configuração de Firewall - Liberar apenas SSH (via Shell)
+- name: Configure Firewall - Allow SSH Service
+  shell: |
+    firewall-cmd --permanent --add-service=ssh
+    firewall-cmd --reload
+  register: firewall_cmd
+  changed_when: "'ALREADY_ENABLED' not in firewall_cmd.stderr"
+  notify: reload firewalld
+
+# 8. Gestão de Usuário - Criar usuário de Deploy
+- name: Create Deploy User and add to Docker Group
+  user:
+    name: "{{ deploy_username }}"
+    groups: docker
+    append: yes
+    shell: /bin/bash

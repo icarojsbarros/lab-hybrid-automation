@@ -1,0 +1,10 @@
+.terraform/
+*.tfstate*
+*.tfvars
+*.tfstate.backup
+*.pem
+*.key
+ansible/inventory.ini
+inventory.ini
+ansible.log
+.DS_Store
