@@ -1,143 +1,96 @@
-# 🏗️ Lab 1: Automação de Infraestrutura Híbrida (AWS + Ansible)
+# Lab: Automação de Infraestrutura Híbrida (Terraform + Ansible)
 
-## 📌 Visão Geral
-
-Este laboratório demonstra a implementação de uma infraestrutura moderna seguindo o modelo de **Infrastructure as Code (IaC)** e **Configuration Management**.
-
-O objetivo é provisionar um servidor de aplicação na AWS utilizando Terraform e configurá-lo de forma automática e idempotente com Ansible, simulando um ambiente de missão crítica.
-
-> **Cenário:** Integração de recursos Cloud com padrões de segurança governamentais (DTIC), garantindo que a configuração do servidor seja auditável, resiliente e replicável.
+Este repositório contém um laboratório completo de **Infrastructure as Code (IaC)** e **Configuration Management**. O objetivo é provisionar uma infraestrutura segura na AWS utilizando Terraform e automatizar o hardening do sistema operacional e a instalação do Docker via Ansible.
 
 ---
 
-## 📐 Arquitetura da Solução
+## 🏗️ Arquitetura do Projeto
+
+O projeto segue o fluxo moderno de entrega de infraestrutura:
+
+1. **Terraform:** Provisiona a rede (VPC, Subnet, IGW), Security Groups e a instância EC2 (t3.micro) usando Data Sources para buscar a AMI oficial do Amazon Linux 2.  
+2. **Ansible:** Realiza o "post-provisioning", aplicando regras de firewall, desabilitando acessos inseguros e preparando o runtime de containers.
 
 ```mermaid
 graph TD
-    subgraph "Local Station"
-        A[Terraform] -->|1. Provision| B(Cloud AWS)
-        A -->|2. Generate| C[inventory.ini]
-        D[Ansible] -->|3. Configure| E[EC2 Instance]
-    end
-
-    subgraph "AWS Cloud"
-        B --> VPC[VPC 10.0.0.0/16]
-        VPC --> IGW[Internet Gateway]
-        VPC --> Subnet[Public Subnet]
-        Subnet --> SG[Security Group: Port 22]
-        SG --> EC2[Amazon Linux 2]
-    end
-
-    subgraph "OS Level (Ansible Role: common)"
-        EC2 --> Docker[Docker Engine]
-        EC2 --> Sec[Hardening: SSH & SELinux]
-        EC2 --> User[Deploy User]
-    end
-
-    C -.->|Host IP| D
+    A[Terraform] -->|Provisiona| B(VPC / Subnet / SG)
+    A -->|Cria| C(EC2 Instance)
+    A -->|Gera| D[Inventory.ini]
+    D -->|Input| E[Ansible Playbook]
+    E -->|Hardening| F(Firewalld / SSH / SELinux)
+    E -->|Runtime| G(Docker Engine)
 ```
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
-- **Terraform (v1.5+)** → Provisionamento de infraestrutura escalável
-- **Ansible (v2.10+)** → Gerenciamento de configuração e hardening de SO
-- **AWS Provider (~> 6.0)** → Serviços de computação e rede
-- **Mermaid.js** → Documentação de arquitetura como código
+- **Cloud:** AWS (EC2, VPC, Security Groups)  
+- **IaC:** Terraform v1.x  
+- **Configuration Management:** Ansible v2.16+  
+- **SO:** Amazon Linux 2 (RHEL based)  
+- **Ambiente de Execução:** WSL2 (Ubuntu) / Git Bash  
 
 ---
 
-## 🛡️ Decisões de Engenharia & Boas Práticas
+## 🔐 Diferenciais de Segurança (Hardening)
 
-### 1. Camada de Infraestrutura (Terraform)
+Diferente de setups básicos, este laboratório aplica práticas recomendadas de segurança:
 
-- **AMI Dinâmica**
-  Utilização de data sources para buscar a AMI mais recente do Amazon Linux 2, evitando falhas por IDs obsoletos.
-
-- **Segurança (Least Privilege)**
-  Security Group restrito via variável `my_ip`, com validação de formato CIDR usando Regex no `variables.tf`.
-
-- **Integração Nativa**
-  Geração automática do arquivo `inventory.ini` via recurso `local_file`, eliminando erros manuais.
+- **Least Privilege:** Criação de usuário de deploy dedicado com acesso restrito ao Docker socket  
+- **Firewall Ativo:** Configuração do firewalld para permitir estritamente o tráfego SSH  
+- **SSH Hardening:** Desabilitação do login via usuário root  
+- **SELinux:** Garantia de conformidade com políticas de controle de acesso  
 
 ---
 
-### 2. Camada de Configuração (Ansible)
+## 📸 Demonstração de Resultados
 
-- **Modularização por Roles**
-  Estrutura organizada em `roles/common`, facilitando manutenção e reuso.
+Abaixo, as evidências da execução bem-sucedida do ciclo de vida da infraestrutura:
 
-- **Hardening de SO**
-  - Desabilitação de login root via SSH
-  - Configuração de firewall (SSH only)
+### 1. Provisionamento com Terraform
+Execução do `terraform apply` demonstrando a criação dinâmica de recursos e a exposição de outputs técnicos.
 
-- **Idempotência e Handlers**
-  Uso de `notify` para reiniciar serviços apenas quando necessário.
+### 2. Validação no Console AWS
+Confirmação da instância provisionada com as tags e configurações de hardware definidas via código.
 
-- **SELinux Permissive**
-  Mantém auditoria ativa sem comprometer compatibilidade com Docker.
+### 3. Configuração com Ansible
+Execução do playbook demonstrando a idempotência das tarefas e o sucesso no setup de segurança.
+
+### 4. Validação Interna do Servidor
+Verificação manual do status do firewall, Docker Engine e políticas de segurança após o deploy.
 
 ---
 
 ## 🚀 Como Executar
 
-### 🔧 Pré-requisitos
+### Pré-requisitos
 
-- AWS CLI configurado com credenciais válidas
-- Chave SSH (`.pem`) cadastrada na AWS
-- Ferramentas de qualidade:
-  - `tflint`
-  - `ansible-lint`
+- AWS CLI configurado com credenciais válidas  
+- Terraform e Ansible instalados no seu ambiente (preferencialmente WSL2)  
 
 ---
 
-### 📦 Passo 1: Provisionamento (Terraform)
+### Passo 1: Infraestrutura
 
 ```bash
 cd terraform
-
 terraform init
-
-terraform plan \
-  -var="key_name=sua-chave" \
-  -var="my_ip=SEU_IP/32"
-
-terraform apply -auto-approve \
-  -var="key_name=sua-chave" \
-  -var="my_ip=SEU_IP/32"
+terraform apply -var="key_name=sua-chave" -var="my_ip=$(curl -s http://checkip.amazonaws.com)/32"
 ```
 
 ---
 
-### ⚙️ Passo 2: Configuração (Ansible)
-
-O Terraform irá gerar automaticamente o arquivo de inventário.
+### Passo 2: Configuração
 
 ```bash
-cd ..
-
-ansible-playbook \
-  -i ansible/inventory.ini \
-  -u ec2-user \
-  --private-key sua-chave.pem \
-  ansible/playbook.yml
+cd ../ansible
+ansible-playbook -i inventory.ini -u ec2-user --private-key "~/sua-chave.pem" playbook.yml
 ```
-
----
-
-## 🔍 Troubleshooting
-
-| Sintoma                        | Causa Provável                                  | Solução                     |
-|--------------------------------|--------------------------------------------------|-----------------------------|
-| No configuration files         | Executado fora da pasta `/terraform`            | Use `cd terraform`          |
-| SSH Timeout no Ansible         | Security Group ou instância inicializando       | Verifique IP em `my_ip`     |
-| Permission Denied (publickey)  | Problema com chave `.pem`                       | `chmod 400 chave.pem`       |
-| Erros SELinux no Docker        | Contexto bloqueando volumes                     | Verifique com `getenforce`  |
 
 ---
 
 ## 👨‍💻 Autor
 
-**Ícaro Barros**
-Engenheiro de Computação & Solutions Architect
+**Ícaro Januário**  
+Engenheiro de Computação | Cloud & DevOps
