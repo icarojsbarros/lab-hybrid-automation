@@ -1,6 +1,7 @@
 # Lab: Automação de Infraestrutura Híbrida (Terraform + Ansible)
 
-Este repositório contém um laboratório completo de **Infrastructure as Code (IaC)** e **Configuration Management**. O objetivo é provisionar uma infraestrutura segura na AWS utilizando Terraform e automatizar o hardening do sistema operacional e a instalação do Docker via Ansible.
+Este repositório contém um laboratório completo de Infrastructure as Code (IaC) e Configuration Management. 
+O objetivo é provisionar uma infraestrutura segura na AWS utilizando Terraform e automatizar o hardening do sistema operacional e a instalação do Docker via Ansible.
 
 ---
 
@@ -50,15 +51,19 @@ Abaixo, as evidências da execução bem-sucedida do ciclo de vida da infraestru
 
 ### 1. Provisionamento com Terraform
 Execução do `terraform apply` demonstrando a criação dinâmica de recursos e a exposição de outputs técnicos.
+![Terraform Apply](assets/screenshots/01-terraform-apply-success.png)
 
 ### 2. Validação no Console AWS
 Confirmação da instância provisionada com as tags e configurações de hardware definidas via código.
+![AWS Console](assets/screenshots/02-aws-console-validation.png)
 
 ### 3. Configuração com Ansible
 Execução do playbook demonstrando a idempotência das tarefas e o sucesso no setup de segurança.
+![Ansible Recap](assets/screenshots/03-ansible-execution-recap.png)
 
 ### 4. Validação Interna do Servidor
 Verificação manual do status do firewall, Docker Engine e políticas de segurança após o deploy.
+![Security Validation](assets/screenshots/04-os-security-verification.png)
 
 ---
 
@@ -92,5 +97,5 @@ ansible-playbook -i inventory.ini -u ec2-user --private-key "~/sua-chave.pem" pl
 
 ## 👨‍💻 Autor
 
-**Ícaro Januário**  
+**Ícaro Barros**  
 Engenheiro de Computação | Cloud & DevOps
